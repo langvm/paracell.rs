@@ -1,0 +1,56 @@
+use std::str::FromStr;
+use crate::parser::ast::*;
+
+grammar;
+
+pub Ident: Ident = <ident: r"_+[a-zA-Z]+[a-zA-Z0-9]*"> => Ident{lit: ident.to_string()};
+
+pub Num: Nat = {
+    "0" => Nat{val: Ok(0)},
+    <lit: r"[1-9]+[0-9]*"> => Nat{val: u128::from_str(lit)},
+    <lit: r"0x[0-9A-F]*"> => Nat{val: u128::from_str_radix(&lit[2..lit.len()], 16)},
+    <lit: r"0[0-7]*"> => Nat{val: u128::from_str_radix(&lit[1..lit.len()], 8)},
+    <lit: r"0b[0-1]*"> => Nat{val: u128::from_str_radix(&lit[2..lit.len()], 2)},
+}
+
+pub Type: Type = {
+}
+
+pub UnaryOperator: UnaryOperator = {
+    "~" => UnaryOperator::Invert,
+}
+
+pub UnaryOperatorExpr: UnaryOperatorExpr = "(" <op: UnaryOperator> <expr: Expr> ")" => UnaryOperatorExpr{op, expr};
+
+pub BinaryOperator: BinaryOperator = {
+    "+" => BinaryOperator::Add,
+    "-" => BinaryOperator::Sub,
+    "*" => BinaryOperator::Mul,
+    "/" => BinaryOperator::Div,
+    "%" => BinaryOperator::Mod,
+    "and" => BinaryOperator::And,
+    "or" => BinaryOperator::Or,
+}
+
+pub BinaryOperatorExpr: BinaryOperatorExpr = "(" <op: BinaryOperator> <left: Expr> <right: Expr> ")" => BinaryOperatorExpr{left, op, right};
+
+pub Case: Case = "(" "case" <cond: Expr> <expr: Expr> ")" => Case{cond, expr};
+
+pub MatchExpr: MatchExpr = "(" "match" <expr: Expr> <patterns: Case*> ")" => MatchExpr{expr, patterns};
+
+pub Expr: Expr = {
+    <expr: UnaryOperatorExpr> => Expr::Unary(Box::from(expr)),
+    <expr: BinaryOperatorExpr> => Expr::Binary(Box::from(expr)),
+    <expr: MatchExpr> => Expr::Match(Box::from(expr)),
+}
+
+pub LetDecl: LetDecl = "(" "let" <ident:Ident> <expr: Expr> ")" => LetDecl{ident, expr};
+pub VarDecl: VarDecl = "(" "var" <ident: Ident> <expr: Expr> ")" => VarDecl{ident, expr};
+
+pub FuncDecl: FuncDecl = "(" "func" "(" "params" <params: Type*> ")" ")" => FuncDecl{params, expr};
+
+pub Decl: Decl = {
+    <decl: LetDecl> => Decl::Let(decl),
+    <decl: VarDecl> => Decl::Var(decl),
+    <decl: FuncDecl> => Decl::Func(decl),
+}
