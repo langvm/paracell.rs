@@ -1,0 +1,4 @@
+[package]
+name = "paracell_parser_sem"
+version = "0.1.0"
+edition = "2021"

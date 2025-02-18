@@ -1,0 +1,135 @@
+use std::str::FromStr;
+use crate::ast::*;
+
+grammar;
+
+// Composition syntax
+
+ListSucc<T, SPLIT>: T = SPLIT <e: T> => e;
+
+List<T, SPLIT, L, R>: Vec<T> = L <lead: T> <succ: ListSucc<T, SPLIT>*> R => {
+	let mut elems = Vec::new();
+	elems.push(lead);
+	elems.append(succ);
+	elems
+};
+
+// Atoms
+
+// regfile_a0
+pub Ident: Ident = <ident: r"_+[a-zA-Z]+[a-zA-Z0-9]*"> => Ident{lit: ident.to_string()};
+
+pub Nat: Nat = {
+	// 0
+	"0" => Nat{val: Ok(0)},
+	// 10
+	<lit: r"[1-9]+[0-9]*"> => Nat{val: u128::from_str(lit)},
+	// 0xff
+	<lit: r"0x[0-9A-F]*"> => Nat{val: u128::from_str_radix(&lit[2..lit.len()], 16)},
+	// 07
+	<lit: r"0[0-7]*"> => Nat{val: u128::from_str_radix(&lit[1..lit.len()], 8)},
+	// 0b1001
+	<lit: r"0b[0-1]*"> => Nat{val: u128::from_str_radix(&lit[2..lit.len()], 2)},
+}
+
+UnaryOperator: UnaryOperator = {
+	"~" => UnaryOperator::Invert,
+}
+
+BinaryOperator: BinaryOperator = {
+	"+" => BinaryOperator::Add,
+	"-" => BinaryOperator::Sub,
+	"*" => BinaryOperator::Mul,
+	"/" => BinaryOperator::Div,
+	"%" => BinaryOperator::Mod,
+
+	"and" => BinaryOperator::And,
+	"or" => BinaryOperator::Or,
+}
+
+// Expressions
+
+TupleExpr: TupleExpr = {
+	// ()
+	"(" ")" => TupleExpr{exprs: Vec::new()},
+	// (1, 1)
+	<exprs: List<Expr, ",", "(", ")">> => TupleExpr{exprs},
+}
+
+// FuncName(params)
+ApplyExpr: ApplyExpr = <ident: Ident> <params: TupleExpr> => ApplyExpr{ident, params};
+
+pub Expr: Expr = {
+	#[precedence(level="0")]
+	<v: Ident> => Expr::Ident(v),
+	#[precedence(level="0")]
+	<v: TupleExpr> => Expr::Tuple(Box::from(v)),
+	#[precedence(level="0")]
+	<v: ApplyExpr> => Expr::Apply(Box::from(v)),
+
+	// ~bit
+	#[precedence(level="1")]
+	<op: UnaryOperator> <expr: Expr> => Expr::Unary(Box::from(UnaryOperatorExpr{op, expr})),
+
+	// 1 + 1
+	#[precedence(level="2")] #[assoc(side="left")]
+	<left: Expr> <op: BinaryOperator> <right: Expr> => Expr::Binary(Box::from(BinaryOperatorExpr{left, op, right})),
+}
+
+// Types
+
+// (Nat, Nat)
+TupleType: TupleType = <types: List<Type, ",", "(", ")">> => TupleType{types};
+
+// struct AxiReadPacket {
+//   valid: Bit,
+//   ready: Bit,
+//   address: Nat,
+//   data: Nat
+// }
+RecordType: RecordType = "struct" <fields: List<Field, ",", "{", "}">> => RecordType{fields};
+
+// union Axi { 
+// }
+UnionType: UnionType = "union" <variants: List<Field, ",", "{", "}">> => UnionType{variants};
+
+Type: Type = {
+	<v: TupleType> => Type::Tuple(Box::from(v)),
+	<v: RecordType> => Type::Record(Box::from(v)),
+	<v: UnionType> => Type::Union(Box::from(v)),
+	<v: Ident> => Type::Ident(v),
+}
+
+// Declarations
+
+Field: Field = <ident: Ident> ":" <typ: Type> => Field{ident,typ};
+
+TypeAliasDecl: TypeAliasDecl = "type" <ident: Ident> "=" <typ: Type> => TypeAliasDecl{ident, typ};
+
+LetDecl: LetDecl = "let" <ident: Ident> "=" <expr: Expr> => LetDecl{ident, expr};
+
+VarDecl: VarDecl = "var" <ident: Ident> "=" <expr: Expr> => VarDecl{ident, expr};
+
+FuncDecl: FuncDecl = <params: List<Type, ",", "(", ")">> <expr: Expr> => FuncDecl{params, expr};
+
+// for (port_a, port_b) in output_flows {
+//   Connect(input_a, flow_a, flow_b)
+// }
+ForeachDecl: ForeachDecl = "for" <recv: TupleExpr> "in" <collection: Expr> <block: Block> => ForeachDecl{recv, collection, block};
+
+pub Decl: Decl = {
+	<v: LetDecl> => Decl::Let(v),
+	<v: VarDecl> => Decl::Var(v),
+	<v: FuncDecl> => Decl::Func(v),
+	<v: TypeAliasDecl> => Decl::TypeAlias(v),
+	<v: ForeachDecl> => Decl::Foreach(v),
+}
+
+// Statement
+
+Stmt: Stmt = {
+	<v: Expr> => Stmt::Expr(v),
+	<v: Decl> => Stmt::Decl(v),
+}
+
+Block: Block = <stmts: List<Stmt, ";", "{", "}">> => Block{stmts};

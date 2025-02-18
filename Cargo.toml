@@ -1,12 +1,5 @@
-[package]
-name = "paracell"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[dependencies]
-lalrpop = "0.22.0"
-lalrpop-util = "0.22.0"
-thiserror = "1.0.64"
+resolver = "2"
 
-[build-dependencies]
-lalrpop = "0.22.0"
+members = ["codegen_circt", "codegen_llvm", "codegen_verilog", "parser_pest", "parser_sem", "represent"]
