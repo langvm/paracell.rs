@@ -7,6 +7,7 @@ A compiler and synthesizer with
 - Dataflow parallelism analysis
 - Features from FP to be dataflow-friendly
 - High-level synthesis
+- Multi-stage programming.
 
 ## Overview
 
@@ -22,9 +23,12 @@ flowchart TD
     Opt -->|FSM| Timing[Timing / Sequence Analysis]
     Opt -->|Stateless| Synthesis
     Timing --> Synthesis
+    Transpile --> MCode
     Compile --> Codegen
     Codegen --> MCode[Machine Code]
     Synthesis --> RTL[FSM / Combinational RTL]
+    MCode --> CPU[CPU with ILP / TLP]
+    RTL --> FPGA
 ```
 
 ## Syntax
@@ -83,5 +87,6 @@ This package aims to provide a unified AST structure for all types of parsers an
 I think the syntax that from LALRPOP is generic for LL, LALR and PEG.
 So I'm keeping the LALRPOP descriptions here.
 
-I'm considering build a PEG parser generator which continuously use the LALRPOP syntax as the language form description
-language.
+~~I'm considering build a PEG parser generator which continuously use the LALRPOP syntax as the language form description language.~~
+
+I think LALRPOP and Tree-sitter are enough.

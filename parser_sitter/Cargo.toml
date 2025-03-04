@@ -1,0 +1,10 @@
+[package]
+name = "paracell_parser_sitter"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rust-sitter = "0.4.4"
+
+[build-dependencies]
+rust-sitter-tool = "0.4.4"

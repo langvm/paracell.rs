@@ -2,4 +2,4 @@
 
 resolver = "2"
 
-members = ["codegen_circt", "codegen_llvm", "codegen_verilog", "parser_pest", "parser_sem", "represent"]
+members = ["codegen_circt", "codegen_llvm", "codegen_verilog", "parser_lalrpop", "parser_sem", "represent", "util_macro"]
